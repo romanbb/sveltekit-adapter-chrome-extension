@@ -120,7 +120,7 @@ async function removeInlineScripts(directory, log) {
     });
 }
 
-function reWriteExtensionManifest(directory, manifest, builder) {
+async function reWriteExtensionManifest(directory, manifest, builder) {
   const { log, getStaticDirectory, getClientDirectory, copy } = builder;
   log("Re-writing extension manifest");
   let sourceFilePath;
@@ -130,9 +130,16 @@ function reWriteExtensionManifest(directory, manifest, builder) {
     sourceFilePath = join(getClientDirectory(), manifest);
   }
   if (existsSync(sourceFilePath)) {
+    // find build/app/immutable/background.<hash>.js and replace path in manifest
+    const files = await glob(`./app/immutable/background.*.js`, {cwd: directory});
     log.info("Extension manifest found");
-    const res = copy(sourceFilePath, join(directory, "manifest.json"));
-    log.success("Successfully re-wrote extension manifest");
+
+    const json = JSON.parse(readFileSync(sourceFilePath, "utf-8"));
+    json.background.service_worker = files[0].replace(/\\/g, `/`);
+
+    writeFileSync(join(directory, "manifest.json"), JSON.stringify(json, null, 2));
+
+    log.success("Successfully re-wrote extension manifest and updated background.js path");
   } else {
     log.error(
       `Extension manifest not found. Make sure you've added your extension manifest in your statics directory with the name ${manifest}`
