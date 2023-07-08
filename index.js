@@ -130,16 +130,19 @@ async function reWriteExtensionManifest(directory, manifest, builder) {
     sourceFilePath = join(getClientDirectory(), manifest);
   }
   if (existsSync(sourceFilePath)) {
-    // find build/app/immutable/background.<hash>.js and replace path in manifest
     const files = await glob(`./app/immutable/background.*.js`, {cwd: directory});
     log.info("Extension manifest found");
 
     const json = JSON.parse(readFileSync(sourceFilePath, "utf-8"));
-    json.background.service_worker = files[0].replace(/\\/g, `/`);
+
+    const backgroundJsContent = readFileSync(join(directory, files[0]));
+    // append /app/immutable to all imports in backgroundJsContent
+    const updatedBackgroundJsContent = backgroundJsContent.toString().replace(/(\s+from ["'].)([^"']+)/g, "$1/app/immutable/$2");
+    writeFileSync(join(directory, "background.js"), updatedBackgroundJsContent);
 
     writeFileSync(join(directory, "manifest.json"), JSON.stringify(json, null, 2));
 
-    log.success("Successfully re-wrote extension manifest and updated background.js path");
+    log.success("Successfully re-wrote extension manifest and updated background.js paths");
   } else {
     log.error(
       `Extension manifest not found. Make sure you've added your extension manifest in your statics directory with the name ${manifest}`
