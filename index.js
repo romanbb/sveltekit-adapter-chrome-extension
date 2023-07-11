@@ -132,8 +132,10 @@ async function reWriteExtensionManifest(directory, manifest, builder) {
   if (existsSync(sourceFilePath)) {
     const files = await glob(`./app/immutable/background.*.js`, {cwd: directory});
     log.info("Extension manifest found");
-
     const json = JSON.parse(readFileSync(sourceFilePath, "utf-8"));
+
+    const { version } = JSON.parse(readFileSync(join(directory, '..', 'package.json')));
+    json.version = version;
 
     const backgroundJsContent = readFileSync(join(directory, files[0]));
     // append /app/immutable to all imports in backgroundJsContent
